@@ -25,44 +25,43 @@ public class JDBCExample6 {
 				FROM TB_USER
 				WHERE USER_ID = ?
 				AND USER_PW = ?
-				""";
+		""";
 		
 		try(Connection conn = DriverManager.getConnection(url, userName, password);
-			PreparedStatement pstmt = conn.prepareStatement(sql);
-			Scanner sc = new Scanner(System.in)) {
+				PreparedStatement pstmt = conn.prepareStatement(sql);
+				Scanner sc = new Scanner(System.in)) {
 			
-			conn.setAutoCommit(false);
+				conn.setAutoCommit(false);
 			
-			System.out.println("== 사용자 삭제 ==");
-			System.out.print("아이디: ");
-			String id = sc.next();
+				System.out.println("== 사용자 삭제 ==");
+				System.out.print("아이디: ");
+				String id = sc.next();
 			
-			System.out.print("비밀번호: ");
-			String pw = sc.next();
+				System.out.print("비밀번호: ");
+				String pw = sc.next();
 			
-			// ?(placeHolder)에 알맞은 값 세팅
-			pstmt.setString(1, id);
-			pstmt.setString(2, pw);
+				// ?(placeHolder)에 알맞은 값 세팅
+				pstmt.setString(1, id);
+				pstmt.setString(2, pw);
 			
-			int result = pstmt.executeUpdate();
+				int result = pstmt.executeUpdate();
 			
-			if(result == 0) {
-				System.out.println("아이디 또는 비밀번호가 일치하지 않습니다!");
-			} else {
-				System.out.print("정말 삭제 하시겠습니까? (Y/N)");
-				String check = sc.next().toUpperCase();
-				
-				if(check.equals("Y")) {
-					conn.commit();
-					System.out.println("삭제 되었습니다");
+				if(result == 0) {
+					System.out.println("아이디 또는 비밀번호가 일치하지 않습니다!");
 				} else {
-					conn.rollback();
-					System.out.println("삭제 취소");
+					System.out.print("정말 삭제 하시겠습니까? (Y/N)");
+					String check = sc.next().toUpperCase();
+				
+					if(check.equals("Y")) {
+						conn.commit();
+						System.out.println("삭제 되었습니다");
+					} else {
+						conn.rollback();
+						System.out.println("삭제 취소");
+					}
 				}
+			} catch (Exception e) {
+				e.printStackTrace();
 			}
-			
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
 	}
 }
