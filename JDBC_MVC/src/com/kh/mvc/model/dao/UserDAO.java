@@ -1,5 +1,10 @@
 package com.kh.mvc.model.dao;
 
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -21,7 +26,7 @@ public class UserDAO {
 	 * Statement: Connection이 가지고 있는 연결정보 DB에 SQL문을 전달하고 실행하고 결과도 받아오는 객체
 	 * ResultSet: 실행한 SQL문이 + SELECT문일 경우 조회된 결과가 처음 담기는 객체
 	 * 
-	 * Prepared Statement: SQL을 미리 준비하는 개념 ? (플레이스 홀더)로 확보해놓은 공간을 사용자가 입력한 값들과 바인딩해서 SQL문 수행
+	 * Prepared Statement: SQL을 미리 준비하는 개념 ?(플레이스 홀더)로 확보해놓은 공간을 사용자가 입력한 값들과 바인딩해서 SQL문 수행
 	 * 
 	 * 처리 절차
 	 * 1) JDBC Driver 등록: 해당 DBMA에서 제공하는 클래스 정보를 동적으로 등록
@@ -41,23 +46,116 @@ public class UserDAO {
 	 * 			SELECT: 6-1에서 만든 거
 	 * 			DML: 처리된 행의 개수
 	 */
-	public List<UserDTO> selectAll() {
+	private final String URL = "jdbc:oracle:thin:@112.221.156.34:12345:XE";
+	private final String USER_NAME = "KH13_BJY";
+	private final String PASSWORD = "KH1234";
+	
+	static {
+		try {
+			Class.forName("oracle.jdbc.OracleDriver");
+			
+		} catch (ClassNotFoundException e) {
+				System.out.println("ojdbc가 없거나 오타있는 듯");
+		}
+	}
+	
+	public List<UserDTO> selectAll(Connection conn) {
 		/* VO / DTO / Entity
 		 * 1명의 회원의 정보는 1개의 UserDTO 객체의 필드의 값을 담아야 함
 		 */
 		List<UserDTO> list = new ArrayList<UserDTO>();
 		
-		String sql = "SELECT "
+		String sql = 
+					"SELECT "
 				+ 	"USER_NO"
 				+ ", USER_ID"
 				+ ", USER_PW"
 				+ ", USER_NAME"
-				+ ", ENROLL_DATE"
-				+ "FROM"
-				+ 	"TB_USER"
-				+ "ORDER BY"
+				+ ", ENROLL_DATE "
+				+ "FROM "
+				+ 	"TB_USER "
+				+ "ORDER BY "
 				+ 	"ENROLL_DATE DESC";
 		
+		PreparedStatement pstmt = null;
+		ResultSet rset = null;
+		
+		try {
+			pstmt = conn.prepareStatement(sql);
+			rset = pstmt.executeQuery();
+			
+			while(rset.next()) {
+				UserDTO user = new UserDTO();
+				
+				user.setUserNo(rset.getInt("USER_NO"));
+				user.setUserId(rset.getString("USER_ID"));
+				user.setUserPW(rset.getString("USER_PW"));
+				user.setUserName(rset.getString("USER_NAME"));
+				user.setEnrollDate(rset.getDate("ENROLL_DATE"));
+				
+				list.add(user);
+			}
+			
+		} catch (SQLException e) {
+				e.printStackTrace();
+				System.out.println("오타 확인해");
+				
+		} finally {
+			try {
+				if(rset != null) rset.close();
+				if(pstmt != null) pstmt.close();
+				if(conn != null) conn.close();
+				
+			} catch (SQLException e) {
+					System.out.println("암튼 이상함");
+			}
+		}
+		
 		return list;
+	}
+	
+	public int insertUser(UserDTO user) {
+		Connection conn = null;
+		
+		PreparedStatement pstmt = null;
+		
+		String sql = """
+				INSERT INTO TB_USER
+				VALUES (SEQ_USER_NO.NEXTVAL, ?, ?, ?, SYSDATE)
+				""";
+		
+		int result = 0;
+		
+		try {
+			conn = DriverManager.getConnection(URL, USER_NAME, PASSWORD);
+			
+			pstmt = conn.prepareStatement(sql);
+			
+			pstmt.setString(1, user.getUserId());
+			pstmt.setString(2, user.getUserPW());
+			pstmt.setString(3, user.getUserName());
+			
+			result = pstmt.executeUpdate();
+			
+		} catch (SQLException e) {
+				e.printStackTrace();
+			
+		} finally {
+			try {
+				if(pstmt != null && !pstmt.isClosed()) pstmt.close();
+				
+			} catch (SQLException e) {
+					e.printStackTrace();
+			}
+			
+			try {
+				if(conn != null && !conn.isClosed()) conn.close();
+				
+			} catch (SQLException e) {
+					e.printStackTrace();
+			}
+		}
+		
+		return result;
 	}
 }
