@@ -1,7 +1,6 @@
 package com.kh.mvc.model.dao;
 
 import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -9,6 +8,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.kh.mvc.model.dto.UserDTO;
+import com.kh.mvc.util.JdbcUtil;
 
 /**
  * DAO(Data Access Object)
@@ -46,10 +46,6 @@ public class UserDAO {
 	 * 			SELECT: 6-1에서 만든 거
 	 * 			DML: 처리된 행의 개수
 	 */
-	private final String URL = "jdbc:oracle:thin:@112.221.156.34:12345:XE";
-	private final String USER_NAME = "KH13_BJY";
-	private final String PASSWORD = "KH1234";
-	
 	static {
 		try {
 			Class.forName("oracle.jdbc.OracleDriver");
@@ -101,22 +97,13 @@ public class UserDAO {
 				System.out.println("오타 확인해");
 				
 		} finally {
-			try {
-				if(rset != null) rset.close();
-				if(pstmt != null) pstmt.close();
-				if(conn != null) conn.close();
-				
-			} catch (SQLException e) {
-					System.out.println("암튼 이상함");
-			}
+				JdbcUtil.closeSQL(rset, pstmt, conn);
 		}
 		
 		return list;
 	}
 	
-	public int insertUser(UserDTO user) {
-		Connection conn = null;
-		
+	public int insertUser(Connection conn, UserDTO user) {
 		PreparedStatement pstmt = null;
 		
 		String sql = """
@@ -127,8 +114,6 @@ public class UserDAO {
 		int result = 0;
 		
 		try {
-			conn = DriverManager.getConnection(URL, USER_NAME, PASSWORD);
-			
 			pstmt = conn.prepareStatement(sql);
 			
 			pstmt.setString(1, user.getUserId());
@@ -141,21 +126,226 @@ public class UserDAO {
 				e.printStackTrace();
 			
 		} finally {
-			try {
-				if(pstmt != null && !pstmt.isClosed()) pstmt.close();
-				
-			} catch (SQLException e) {
-					e.printStackTrace();
-			}
-			
-			try {
-				if(conn != null && !conn.isClosed()) conn.close();
-				
-			} catch (SQLException e) {
-					e.printStackTrace();
-			}
+				JdbcUtil.closeSQL(pstmt, conn);
 		}
 		
 		return result;
+	}
+	
+	/**
+	 * 입력한 아이디와 비밀번호가 일치하는 회원이 존재하는지 검사하는 메서드
+	 * 
+	 * @param conn: 커넥션
+	 * @param uncheckedUser: 입력한 아이디와 비밀번호가 담긴 객체
+	 * @return 일치하는 회원이 존재하면 TRUE, 없으면 FALSE
+	 */
+	public List<UserDTO> checkUser(Connection conn, UserDTO uncheckedUser) {
+		PreparedStatement pstmt = null;
+		ResultSet rset = null;
+		
+		List<UserDTO> result = new ArrayList<UserDTO>();
+		
+		String sql = """
+				SELECT USER_NO, USER_ID, USER_PW, USER_NAME, ENROLL_DATE
+				FROM TB_USER
+				WHERE USER_ID = ? 
+				AND USER_PW = ?
+				""";
+		
+		try {
+			pstmt = conn.prepareStatement(sql);
+			
+			pstmt.setString(1, uncheckedUser.getUserId());
+			pstmt.setString(2, uncheckedUser.getUserPW());
+			
+			rset = pstmt.executeQuery();
+			
+			while(rset.next()) {
+				UserDTO user = new UserDTO();
+				
+				user.setUserNo(rset.getInt("USER_NO"));
+				user.setUserId(rset.getString("USER_ID"));
+				user.setUserPW(rset.getString("USER_PW"));
+				user.setUserName(rset.getString("USER_NAME"));
+				user.setEnrollDate(rset.getDate("ENROLL_DATE"));
+				
+				result.add(user);
+			}
+			
+		} catch (SQLException e) {
+				e.printStackTrace();
+				
+		} finally {
+				JdbcUtil.closeSQL(rset, pstmt, conn);
+		}
+		
+		return result;
+	}
+	
+	public int updatePw(Connection conn, UserDTO newPwInfo) {
+		PreparedStatement pstmt = null;
+		
+		int result = 0;
+		
+		String sql = """
+				UPDATE TB_USER
+				SET USER_PW = ?
+				WHERE USER_ID = ?
+				""";
+		
+		try {
+			pstmt = conn.prepareStatement(sql);
+			
+			pstmt.setString(1, newPwInfo.getUserPW());
+			pstmt.setString(2, newPwInfo.getUserId());
+			
+			result = pstmt.executeUpdate();
+			
+		} catch (SQLException e) {
+				e.printStackTrace();
+				
+		} finally {
+				JdbcUtil.closeSQL(pstmt, conn);
+		}
+		
+		return result;
+	}
+	
+	public boolean selectId(Connection conn, String userId) {
+		PreparedStatement pstmt = null;
+		
+		ResultSet rset = null;
+		
+		String sql = """
+				SELECT USER_ID
+				FROM TB_USER
+				WHERE USER_ID = ?
+				""";
+		
+		try {
+			pstmt = conn.prepareStatement(sql);
+			
+			pstmt.setString(1, userId);
+			
+			rset = pstmt.executeQuery();
+			
+			if(rset.next()) {
+				return true;
+			}
+			
+		}	catch (SQLException e) {
+				e.printStackTrace();
+				
+		} finally {
+				JdbcUtil.closeSQL(rset, pstmt, conn);
+		}
+		
+		return false;
+	}
+	
+	public int deleteUser(Connection conn, UserDTO user) {
+		PreparedStatement pstmt = null;
+		
+		int result = 0;
+		
+		String sql = """
+				DELETE
+				FROM TB_USER
+				WHERE USER_ID = ?
+				AND USER_PW = ?
+				AND USER_NAME = ?
+				""";
+		
+		try {
+			pstmt = conn.prepareStatement(sql);
+			
+			pstmt.setString(1, user.getUserId());
+			pstmt.setString(2, user.getUserPW());
+			pstmt.setString(3, user.getUserName());
+			
+			result = pstmt.executeUpdate();
+			
+		} catch (SQLException e) {
+				e.printStackTrace();
+				
+		} finally {
+				JdbcUtil.closeSQL(pstmt, conn);
+		}
+		
+		return result;
+	}
+	
+	public UserDTO selectUserNo(Connection conn, int userNo) {
+		PreparedStatement pstmt = null;
+		ResultSet rset = null;
+		
+		String sql = """
+				SELECT USER_NO, USER_ID, USER_PW, USER_NAME, ENROLL_DATE
+				FROM TB_USER
+				WHERE USER_NO = ?
+				""";
+		
+		UserDTO user = new UserDTO();
+		
+		try {
+			pstmt = conn.prepareStatement(sql);
+			
+			pstmt.setInt(1, userNo);
+			
+			rset = pstmt.executeQuery();
+			
+			while(rset.next()) {
+				user.setUserNo(rset.getInt("USER_NO"));
+				user.setUserId(rset.getString("USER_ID"));
+				user.setUserPW(rset.getString("USER_PW"));
+				user.setUserName(rset.getString("USER_NAME"));
+				user.setEnrollDate(rset.getDate("ENROLL_DATE"));
+			}
+			
+		} catch (SQLException e) {
+			e.printStackTrace();
+			
+		} finally {
+			JdbcUtil.closeSQL(rset, pstmt, conn);
+		}
+		
+		return user;
+	}
+	
+	public UserDTO selectUserId(Connection conn, String userId) {
+		PreparedStatement pstmt = null;
+		ResultSet rset = null;
+		
+		String sql = """
+				SELECT USER_NO, USER_ID, USER_PW, USER_NAME, ENROLL_DATE
+				FROM TB_USER
+				WHERE USER_ID = ?
+				""";
+		
+		UserDTO user = new UserDTO();
+		
+		try {
+			pstmt = conn.prepareStatement(sql);
+			
+			pstmt.setString(1, userId);
+			
+			rset = pstmt.executeQuery();
+			
+			while(rset.next()) {
+				user.setUserNo(rset.getInt("USER_NO"));
+				user.setUserId(rset.getString("USER_ID"));
+				user.setUserPW(rset.getString("USER_PW"));
+				user.setUserName(rset.getString("USER_NAME"));
+				user.setEnrollDate(rset.getDate("ENROLL_DATE"));
+			}
+			
+		} catch (SQLException e) {
+			e.printStackTrace();
+			
+		} finally {
+			JdbcUtil.closeSQL(rset, pstmt, conn);
+		}
+		
+		return user;
 	}
 }
