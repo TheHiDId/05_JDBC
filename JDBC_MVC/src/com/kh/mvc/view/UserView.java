@@ -25,7 +25,7 @@ public class UserView {
 	 */
 	public void mainMenu() {
 		while(true) {
-			System.out.println("--- USER테이블 관리 프로그램 ---");
+			System.out.println("--- USER 테이블 관리 프로그램 ---");
 			
 			System.out.println();
 			

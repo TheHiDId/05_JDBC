@@ -148,7 +148,7 @@ public class UserDAO {
 		String sql = """
 				SELECT USER_NO, USER_ID, USER_PW, USER_NAME, ENROLL_DATE
 				FROM TB_USER
-				WHERE USER_ID = ? 
+				WHERE USER_ID = ?
 				AND USER_PW = ?
 				""";
 		
