@@ -129,12 +129,4 @@ public class EmployeeDTO {
 	public void setEntYN(char entYN) {
 		this.entYN = entYN;
 	}
-
-	@Override
-	public String toString() {
-		return "EmployeeDTO [empId=" + empId + ", empName=" + empName + ", empNo=" + empNo + ", email=" + email + ", phone="
-				+ phone + ", deptCode=" + deptCode + ", jobCode=" + jobCode + ", salLevel=" + salLevel + ", salary=" + salary
-				+ ", bonus=" + bonus + ", managerId=" + managerId + ", hireDate=" + hireDate + ", entDate=" + entDate
-				+ ", entYN=" + entYN + "]";
-	}
 }
